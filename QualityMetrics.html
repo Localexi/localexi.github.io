@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Translation Quality Metrics Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-ENjdO4Dr2bkBIFxQpeo9e/4M8N2G1Og6cqVzFhJz1+M0Mw5VFFR8XkURy9Bv1WTR"
+      crossorigin="anonymous"
+    >
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <!-- External Data -->
+    <script src="data.js" defer></script>
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .section-title {
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+            color: #343a40;
+            font-size: 2rem; /* Increased font size */
+            font-weight: 600;
+        }
+
+        .metric-title {
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        .reflection {
+            font-style: italic;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .badge-success-custom {
+            background-color: #28a745;
+        }
+        .badge-warning-custom {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .card-header-custom {
+            background-color: #ffffff;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+            padding: 15px; /* Added padding around the chart */
+            box-sizing: border-box; /* Ensures padding is included within the height and width */
+        }
+
+        /* Card Styling */
+        .card {
+            padding-left: 5%;
+            padding-top: 2%;
+            padding-bottom: 2%;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Subtle shadow */
+            border: none; /* Removed default border */
+            border-radius: 8px; /* Rounded corners */
+            background-color: #ffffff;
+        }
+
+        /* Button Styling */
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        /* Navigation Bar Styling */
+        .navbar-custom {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            border-radius: 8px;
+        }
+
+        /* Smooth Scroll Behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+        @media (max-width: 768px) {
+            .card-body {
+                flex-direction: column; /* Stacks the content vertically on small screens */
+            }
+
+            .translation-details, .chart-section {
+                flex-basis: 100%; /* Each takes full width of the container */
+                max-width: 100%; /* Prevents overflow */
+            }
+
+            .chart-section {
+                order: 2; /* Ensures the chart is below the text on small screens */
+            }
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .section-title {
+                font-size: 1.75rem;
+            }
+            .metric-title {
+                font-size: 1rem;
+            }
+            .chart-container {
+                height: 200px;
+            }
+        }
+
+        /* Print Styling */
+        @media print {
+            body {
+                padding: 10mm;
+                background-color: #ffffff;
+            }
+            .card {
+                box-shadow: none;
+                page-break-inside: avoid;
+            }
+            .collapse.show {
+                display: block !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .section-title {
+                border-bottom: 1px solid #000;
+            }
+        }
+
+        /* Additional Styles for Enhanced Readability */
+        h3 {
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            color: #4CAF50;
+        }
+        ol {
+            counter-reset: section;
+            list-style: none;
+            padding-left: 0;
+        }
+        ol > li {
+            counter-increment: section;
+            margin-bottom: 30px;
+        }
+        ol > li::before {
+            content: counter(section) ".";
+            font-weight: bold;
+            color: #4CAF50;
+            margin-right: 10px;
+        }
+        ul {
+            margin-top: 10px;
+            margin-left: 20px;
+        }
+        ul li {
+            margin-bottom: 8px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 90%;
+        }
+        .average-chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            left: 13%;  /* Position the left of the element at the center of the parent */
+        }
+        .card-body {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.translation-details {
+    flex-grow: 1; /* Takes up all available space */
+    min-width: 60%; /* At least 60% of the container width, adjust as necessary */
+}
+
+.chart-section {
+    flex-grow: 0; /* Does not grow */
+    flex-shrink: 0; /* Does not shrink */
+    flex-basis: 40%; /* Base width of the chart section, adjust as necessary */
+    height: 300px; /* Maintain consistent height for the chart */
+}
+
+.chart-container {
+    width: 70%; /* Full width of its container */
+    height: 70%; /* Full height as defined by chart-section */
+    padding: 10px;
+    box-sizing: border-box;
+    background-color: #fff;
+    border-radius: 8px;
+}
+
+.metric-title, .reflection, p {
+    word-wrap: break-word; /* Ensures text breaks and wraps onto the next line */
+}
+
+.additional-info {
+    padding-top: 10px;
+    border-top: 1px solid #ccc;
+    margin-top: 10px;
+}
+
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <!-- Quality Metrics List -->
+        <section id="quality-metrics">
+            <h3 style="font-size: 1.5rem;"
+            >Quality Metrics</h3>
+            <ol>
+                <li>
+                    <span class="metric-title">Semantic Accuracy (1-5):</span>
+                    <ul>
+                        <li>Assess how well the <code>Machine Translation</code> preserves the meaning and includes all relevant information present in the <code>Proofread Sentence</code>.</li>
+                        <li>Evaluate meaning retention at both the word and sentence levels.</li>
+                        <li>Ensure no important elements are omitted or added.</li>
+                        <li>Mismatches in timing should not heavily affect this metric unless they distort meaning.</li>
+                        <li><strong>5:</strong> Perfect accuracy, <strong>1:</strong> Significant meaning loss or distortion.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Fluency (1-5):</span>
+                    <ul>
+                        <li>Analyze the sentence structure and word choice in the <code>Machine Translation</code>.</li>
+                        <li>Determine if the translation sounds natural in Arabic and identify any awkward phrases or unnatural constructions.</li>
+                        <li>Mismatches in timing should not impact this metric unless fluency is compromised.</li>
+                        <li><strong>5:</strong> Completely natural, <strong>1:</strong> Very awkward or unclear.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Grammatical Correctness (1-5):</span>
+                    <ul>
+                        <li>Evaluate the grammatical correctness of the <code>Machine Translation</code>, including subject-verb agreement, gender male and female, tense usage, noun-adjective agreement, and word forms.</li>
+                        <li>Cue timing mismatches should not affect this unless grammar is impacted.</li>
+                        <li><strong>5:</strong> No grammatical errors, <strong>1:</strong> Multiple major grammatical issues.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Punctuation (1-5):</span>
+                    <ul>
+                        <li>Assess the correctness and appropriateness of punctuation marks in the <code>Machine Translation</code>.</li>
+                        <li>Identify any missing, extraneous, or incorrect punctuation that affects readability or meaning.</li>
+                        <li>Timing discrepancies should not affect this metric unless punctuation changes meaning.</li>
+                        <li><strong>5:</strong> Flawless punctuation, <strong>1:</strong> Major punctuation issues throughout.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Terminology and Consistency (1-5):</span>
+                    <ul>
+                        <li>Assess whether the <code>Machine Translation</code> consistently and correctly uses key terms, especially domain-specific vocabulary.</li>
+                        <li>Ensure that terms are translated consistently throughout the sentence.</li>
+                        <li>Cue timing mismatches should not affect this unless term consistency is altered.</li>
+                        <li><strong>5:</strong> Completely accurate and consistent terminology, <strong>1:</strong> Multiple terminology errors or inconsistencies.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Style and Tone (1-5):</span>
+                    <ul>
+                        <li>Compare the tone and style between <code>Machine Translation</code> and <code>Proofread Sentence</code>.</li>
+                        <li>Determine if the translation maintains the appropriate tone (formal/informal) and stylistic features of the original.</li>
+                        <li><strong>5:</strong> Matches perfectly, <strong>1:</strong> Inappropriate style or tone.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Idiom and Slang Handling (1-5):</span>
+                    <ul>
+                        <li>Evaluate how well the <code>Machine Translation</code> handles idioms, slang, and expressions that cannot be translated literally.</li>
+                        <li>Identify instances where literal translation leads to misunderstanding.</li>
+                        <li><strong>5:</strong> Idioms are perfectly adapted, <strong>1:</strong> Literal translations cause confusion or misunderstanding.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Error Categorization:</span>
+                    <ul>
+                        <li>For any mistakes found in the <code>Machine Translation</code>, categorize them based on type:</li>
+                        <ul>
+                            <li><strong>Grammar Error</strong></li>
+                            <li><strong>Punctuation Error</strong></li>
+                            <li><strong>Meaning Loss</strong></li>
+                            <li><strong>Term Misuse</strong></li>
+                            <li><strong>Omission/Addition</strong></li>
+                            <li><strong>Idiom Mistranslation</strong></li>
+                        </ul>
+                        <li>Provide the count of each type of error and classify overall <strong>Minor</strong> or <strong>Major</strong>.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Overall Quality Rating (1-5):</span>
+                    <ul>
+                        <li>Assign an overall score that reflects the combined impact of all the above metrics.</li>
+                        <li>Cue timing mismatches should be considered separately and should not heavily affect the overall score unless they cause significant issues.</li>
+                        <li><strong>5:</strong> Excellent translation with no significant issues, <strong>1:</strong> Poor translation with major flaws.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Post-Editing Effort (1-5):</span>
+                    <ul>
+                        <li>Estimate the effort required to bring the <code>Machine Translation</code> to the level of the <code>Proofread Sentence</code>. A higher score indicates more significant issues in the translation.</li>
+                        <li><strong>5:</strong> Minimal effort required, <strong>1:</strong> Significant effort required.</li>
+                    </ul>
+                </li>
+                <p><strong>Additional R&D Targeted Metrics:</strong></p>
+                <li>
+                    <span class="metric-title">Complexity Flag (1-5):</span>
+                    <ul>
+                        <li>Indicate how much the original sentence contains idioms, slang, or complex expressions that require more than literal translation.</li>
+                        <li>This helps assess whether advanced translation techniques are necessary beyond simple word-for-word translation.</li>
+                        <li><strong>5:</strong> Very complex, <strong>1:</strong> Simple and straightforward.</li>
+                    </ul>
+                </li>
+                <li>
+                    <span class="metric-title">Cue Timing Discrepancies (Yes/No):</span>
+                    <ul>
+                        <li>If there are mismatches at the start or end of cues between <code>Machine Translation</code> and <code>Proofread Sentence</code>, indicate whether they exist.</li>
+                        <li>Do not penalize other metrics for these timing discrepancies unless they cause significant meaning loss or confusion.</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <!-- Visualization Section -->
+<!-- Visualization Section -->
+<section id="visualization">
+    <h2 class="section-title">Translation Quality Metrics Visualization</h2>
+    
+    <!-- Main Average Metrics Chart -->
+    <div class="chart-container mb-5 average-chart-container">
+        <canvas id="averageMetricsChart"></canvas>
+    </div>
+    
+    <!-- Filters and Controls -->
+    <div id="controls" class="mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="filterQuality" class="form-label">Filter by Overall Quality:</label>
+                <select id="filterQuality" class="form-select">
+                    <option value="all">All</option>
+                    <option value="5">5 - Excellent</option>
+                    <option value="4">4 - Good</option>
+                    <option value="3">3 - Average</option>
+                    <option value="2">2 - Poor</option>
+                    <option value="1">1 - Very Poor</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="searchTerm" class="form-label">Search by Keyword:</label>
+                <input type="text" id="searchTerm" class="form-control" placeholder="Enter keyword...">
+            </div>
+            <div class="col-md-4 text-end">
+                <button id="resetFilters" class="btn btn-secondary">Reset Filters</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="cards-container"></div>
+</section>
+
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+      crossorigin="anonymous"
+      defer
+    ></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            function createChart(ctx, metrics) {
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: [
+                            'Semantic Accuracy',
+                            'Fluency',
+                            'Grammatical Correctness',
+                            'Punctuation',
+                            'Terminology Consistency',
+                            'Style & Tone',
+                            'Idiom & Slang Handling'
+                        ],
+                        datasets: [{
+                            label: 'Metrics Score',
+                            data: [
+                                metrics.SemanticAccuracy,
+                                metrics.Fluency,
+                                metrics.GrammaticalCorrectness,
+                                metrics.Punctuation,
+                                metrics.TerminologyConsistency,
+                                metrics.StyleTone,
+                                metrics.IdiomAndSlangHandling
+                            ],
+                            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(40, 167, 69, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 5,
+                                ticks: {
+                                    stepSize: 1,
+                                    backdropColor: 'transparent',
+                                    color: '#495057',
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    }
+                                },
+                                pointLabels: {
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    },
+                                    color: '#343a40'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Function to generate translation cards
+            function generateCards(data) {
+                const container = document.getElementById('cards-container');
+                container.innerHTML = ''; // Clear existing cards
+
+                if (data.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No results found.</p>';
+                    return;
+                }
+
+                data.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+
+                    const cardHeader = document.createElement('div');
+                    cardHeader.className = 'card-header card-header-custom d-flex justify-content-between align-items-center';
+                    cardHeader.innerHTML = `
+                        <span>Entry ${index + 1}</span>
+                    `;
+                    card.appendChild(cardHeader);
+
+                    const collapseDiv = document.createElement('div');
+                    collapseDiv.id = `collapse${index}`;
+                    collapseDiv.className = 'collapse';
+                    collapseDiv.innerHTML = `
+<div class="card-body">
+    <div class="translation-details">
+        <p><strong>Machine Translation:</strong> ${item.machine_sentence}</p>
+        <p><strong>Proofread Sentence:</strong> ${item.proof_sentence}</p>
+        <p class="metric-title">Overall Quality Rating: <span class="badge bg-success-custom">${item.api_response.OverallQuality}</span></p>
+        <p class="metric-title">Post-Editing Effort: <span class="badge bg-warning-custom">${item.api_response.PostEditingEffort}</span></p>
+        <p class="metric-title">Severity: ${item.api_response.ErrorCategorization.Severity}</p>
+        <p class="reflection"><strong>Reflection:</strong> ${item.api_response.Reflection}</p>
+        <div class="additional-info">
+            <p><strong>Additional Info:</strong></p>
+            <p class="metric-title">Complexity Flag: ${item.api_response.ComplexityFlag}</p>
+            <p class="metric-title">Cue Timing Discrepancies: ${item.api_response.CueTimingDiscrepancies}</p>
+        </div>
+    </div>
+    <div class="chart-section">
+        <div class="chart-container">
+            <canvas id="chart${index}"></canvas>
+        </div>
+    </div>
+</div>
+
+`;
+
+                    card.appendChild(collapseDiv);
+
+                    container.appendChild(card);
+
+                    const ctx = document.getElementById(`chart${index}`).getContext('2d');
+                    createChart(ctx, item.api_response);
+                });
+            }
+
+            // Function to create the average metrics radar chart
+            function createAverageChart(data) {
+                const avgMetrics = {
+                    SemanticAccuracy: 0,
+                    Fluency: 0,
+                    GrammaticalCorrectness: 0,
+                    Punctuation: 0,
+                    TerminologyConsistency: 0,
+                    StyleTone: 0,
+                    IdiomAndSlangHandling: 0
+                };
+
+                data.forEach(item => {
+                    avgMetrics.SemanticAccuracy += item.api_response.SemanticAccuracy;
+                    avgMetrics.Fluency += item.api_response.Fluency;
+                    avgMetrics.GrammaticalCorrectness += item.api_response.GrammaticalCorrectness;
+                    avgMetrics.Punctuation += item.api_response.Punctuation;
+                    avgMetrics.TerminologyConsistency += item.api_response.TerminologyConsistency;
+                    avgMetrics.StyleTone += item.api_response.StyleTone;
+                    avgMetrics.IdiomAndSlangHandling += item.api_response.IdiomAndSlangHandling;
+                });
+
+                const count = data.length;
+                if (count === 0) return;
+
+                for (let key in avgMetrics) {
+                    avgMetrics[key] = (avgMetrics[key] / count).toFixed(2);
+                }
+
+                const ctx = document.getElementById('averageChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: [
+                            'Semantic Accuracy',
+                            'Fluency',
+                            'Grammatical Correctness',
+                            'Punctuation',
+                            'Terminology Consistency',
+                            'Style & Tone',
+                            'Idiom & Slang Handling'
+                        ],
+                        datasets: [{
+                            label: 'Average Metrics Score',
+                            data: [
+                                avgMetrics.SemanticAccuracy,
+                                avgMetrics.Fluency,
+                                avgMetrics.GrammaticalCorrectness,
+                                avgMetrics.Punctuation,
+                                avgMetrics.TerminologyConsistency,
+                                avgMetrics.StyleTone,
+                                avgMetrics.IdiomAndSlangHandling
+                            ],
+                            backgroundColor: 'rgba(23, 162, 184, 0.2)', /* Tealish background */
+                            borderColor: 'rgba(23, 162, 184, 1)', /* Teal border */
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(23, 162, 184, 1)' /* Teal points */
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, // Allows the chart to adjust based on container size
+                        layout: {
+                            padding: {
+                                top: 20,
+                                right: 20,
+                                bottom: 20,
+                                left: 20
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 5,
+                                ticks: {
+                                    stepSize: 1,
+                                    backdropColor: 'transparent', // Removes the default backdrop for cleaner look
+                                    color: '#495057', // Darker color for better contrast
+                                    font: {
+                                        size: 12, // Further adjust as needed
+                                        weight: 'bold'
+                                    }
+                                },
+                                pointLabels: {
+                                    font: {
+                                        size: 12, // Ensure labels are legible
+                                        weight: 'bold'
+                                    },
+                                    color: '#343a40' // Darker color for better visibility
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true
+                            }
+                        }
+                    }
+                });
+            }
+            function calculateAverageMetrics(data) {
+    const metricsSum = {
+        SemanticAccuracy: 0,
+        Fluency: 0,
+        GrammaticalCorrectness: 0,
+        Punctuation: 0,
+        TerminologyConsistency: 0,
+        StyleTone: 0,
+        IdiomAndSlangHandling: 0
+    };
+    const count = data.length;
+
+    data.forEach(item => {
+        metricsSum.SemanticAccuracy += item.api_response.SemanticAccuracy;
+        metricsSum.Fluency += item.api_response.Fluency;
+        metricsSum.GrammaticalCorrectness += item.api_response.GrammaticalCorrectness;
+        metricsSum.Punctuation += item.api_response.Punctuation;
+        metricsSum.TerminologyConsistency += item.api_response.TerminologyConsistency;
+        metricsSum.StyleTone += item.api_response.StyleTone;
+        metricsSum.IdiomAndSlangHandling += item.api_response.IdiomAndSlangHandling;
+    });
+
+    return {
+        SemanticAccuracy: (metricsSum.SemanticAccuracy / count).toFixed(2),
+        Fluency: (metricsSum.Fluency / count).toFixed(2),
+        GrammaticalCorrectness: (metricsSum.GrammaticalCorrectness / count).toFixed(2),
+        Punctuation: (metricsSum.Punctuation / count).toFixed(2),
+        TerminologyConsistency: (metricsSum.TerminologyConsistency / count).toFixed(2),
+        StyleTone: (metricsSum.StyleTone / count).toFixed(2),
+        IdiomAndSlangHandling: (metricsSum.IdiomAndSlangHandling / count).toFixed(2)
+    };
+}
+
+function createAverageMetricsChart(data) {
+    const ctx = document.getElementById('averageMetricsChart').getContext('2d');
+    const averages = calculateAverageMetrics(data);
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: [
+                'Semantic Accuracy',
+                'Fluency',
+                'Grammatical Correctness',
+                'Punctuation',
+                'Terminology Consistency',
+                'Style & Tone',
+                'Idiom & Slang Handling'
+            ],
+            datasets: [{
+                label: 'Average Metrics Score',
+                data: [
+                    averages.SemanticAccuracy,
+                    averages.Fluency,
+                    averages.GrammaticalCorrectness,
+                    averages.Punctuation,
+                    averages.TerminologyConsistency,
+                    averages.StyleTone,
+                    averages.IdiomAndSlangHandling
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1,
+                        backdropColor: 'transparent',
+                        color: '#495057',
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    },
+                    pointLabels: {
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        },
+                        color: '#343a40'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    enabled: true
+                }
+            }
+        }
+    });
+}
+
+            // Function to apply filters
+            function applyFilters() {
+                const qualityFilter = document.getElementById('filterQuality').value;
+                const searchTerm = document.getElementById('searchTerm').value.toLowerCase();
+
+                let filteredData = translationData;
+
+                if (qualityFilter !== 'all') {
+                    filteredData = filteredData.filter(item => item.api_response.OverallQuality.toString() === qualityFilter);
+                }
+
+                if (searchTerm) {
+                    filteredData = filteredData.filter(item =>
+                        item.machine_sentence.toLowerCase().includes(searchTerm) ||
+                        item.proof_sentence.toLowerCase().includes(searchTerm) ||
+                        item.api_response.Reflection.toLowerCase().includes(searchTerm)
+                    );
+                }
+                generateCards(filteredData);
+            }
+
+            // Function to reset filters
+            function resetFilters() {
+                document.getElementById('filterQuality').value = 'all';
+                document.getElementById('searchTerm').value = '';
+                generateCards(translationData);
+            }
+
+            // Initialize the dashboard
+            function initDashboard() {
+                createAverageMetricsChart(translationData);
+                generateCards(translationData);
+                document.getElementById('filterQuality').addEventListener('change', applyFilters);
+                document.getElementById('searchTerm').addEventListener('input', applyFilters);
+                document.getElementById('resetFilters').addEventListener('click', resetFilters);
+            }
+
+            // Initialize after all scripts are loaded
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
